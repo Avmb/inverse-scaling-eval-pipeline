@@ -212,6 +212,10 @@ def parse_args(args):
             "opt-2.7b",
             "opt-6.7b",
             "opt-13b",
+            "code-cushman-001",
+            "code-davinci-002",
+            "text-davinci-002",
+            "text-davinci-003", 
         ],
         required=True,
     )
