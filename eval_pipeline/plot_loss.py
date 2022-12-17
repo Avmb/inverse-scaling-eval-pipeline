@@ -41,6 +41,11 @@ size_dict = {
     "opt-2.7b": 2_700_000_000,
     "opt-6.7b": 6_700_000_000,
     "opt-13b": 13_000_000_000,
+    # new OpenAI gpt3 models from their names
+    "code-cushman-001": 12_000_000_000,
+    "code-davinci-002": 175_000_000_000,
+    "text-davinci-002": 2*175_000_000_000,
+    "text-davinci-003": 3*175_000_000_000, # all the davinci models are the same size, but we put different size here to distinguish them in the plot
 }
 
 
