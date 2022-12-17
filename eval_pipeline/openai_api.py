@@ -22,8 +22,14 @@ InstructGPT3Model = Literal[
     "text-curie-001",
     "text-davinci-001",
 ]
+NewGPT3Model = Literal[
+    "code-cushman-001",
+    "code-davinci-002",
+    "text-davinci-002",
+    "text-davinci-003", 
+]
 
-OpenAIModel = Literal[BaseGPT3Model, InstructGPT3Model]
+OpenAIModel = Literal[BaseGPT3Model, InstructGPT3Model, NewGPT3Model]
 
 
 @dataclass
