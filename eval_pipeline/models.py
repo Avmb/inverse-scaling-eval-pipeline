@@ -53,6 +53,15 @@ ValidHFModel = Literal[
     "opt-2.7b",
     "opt-6.7b",
     "opt-13b",
+    "codegen-350M-mono",
+    "codegen-2B-mono",
+    "codegen-6B-mono",
+    "codegen-16B-mono",
+    #"flan-t5-small",
+    #"flan-t5-base",
+    #"flan-t5-large",
+    #"flan-t5-xl",
+    #"flan-t5-xxl",
 ]
 valid_hf_models: tuple[ValidHFModel, ...] = get_args(ValidHFModel)
 
@@ -96,6 +105,8 @@ class HFModel(Model):
         else:
             if model_name.startswith("gpt-neo") or model_name.startswith("gpt-j"):
                 prefix = "EleutherAI/"
+            elif model_name.startswith("codegen-"):
+                prefix = "Salesforce/"
             else:
                 prefix = ""
             torch.cuda.empty_cache()
