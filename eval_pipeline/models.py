@@ -115,12 +115,15 @@ class HFModel(Model):
         # https://huggingface.co/docs/transformers/main/en/model_doc/opt#overview
         if model_name.startswith("opt-"):
             use_fast = False
+            #model_max_length=1024
         else:
             use_fast = True
+            #model_max_length=1023
         self.tokenizer = AutoTokenizer.from_pretrained(
             prefix + model_name,
             use_fast=use_fast,
             model_max_length=1023,
+            #model_max_length=model_max_length,
         )
 
     def _load_opt(self, checkpoint: str, device: Device):
@@ -199,8 +202,9 @@ class HFModel(Model):
                 # we take a log_softmax over all token logits for each position in the class sequence to
                 #  get log probabilities, and then sum the logprobs for the tokens actually chosen
                 logprobs = F.log_softmax(sequence_logits, dim=-1)
+                sequence_tokens_truncated = sequence_tokens[:logprobs.shape[0]]
                 class_logprob = sum(
-                    [logprobs[i, token] for i, token in enumerate(sequence_tokens)]
+                    [logprobs[i, token] for i, token in enumerate(sequence_tokens_truncated)]
                 )
                 class_logprobs.append(class_logprob.item())  # type: ignore (the sum is never empty so never just 0, always a tensor)
 
