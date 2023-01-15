@@ -46,6 +46,10 @@ size_dict = {
     "codegen-2B-mono" : 2_000_000_000,
     "codegen-6B-mono" : 6_000_000_000,
     "codegen-16B-mono" : 16_000_000_000,
+    "codegen-350M-multi" : 350_000_000,
+    "codegen-2B-multi" : 2_000_000_000,
+    "codegen-6B-multi" : 6_000_000_000,
+    "codegen-16B-multi" : 16_000_000_000,
     # new OpenAI gpt3 models from their names
     "code-cushman-001": 12_000_000_000,
     "code-davinci-002": 175_000_000_000,
