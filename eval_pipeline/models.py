@@ -10,6 +10,7 @@ import torch
 import torch.nn.functional as F
 
 from transformers import AutoModelForCausalLM, AutoTokenizer, AutoConfig  # type: ignore
+from transformers import AutoModelForSeq2SeqLM
 from huggingface_hub import snapshot_download
 from accelerate import (
     init_empty_weights,
@@ -255,7 +256,7 @@ class HFModel(Model):
             for class_seq in example.classes:
                 decoder_tokenized_inputs = self.tokenizer(class_seq, return_tensors="pt", truncation=True).to(self.device)
                 decoder_input_ids = decoder_tokenized_inputs.input_ids
-                decoder_input_ids = model._shift_right(decoder_input_ids)
+                decoder_input_ids = self.model._shift_right(decoder_input_ids)
                 outputs = self.model(input_ids=tokenized_inputs.input_ids, decoder_input_ids=decoder_tokenized_inputs.input_ids)
                 logits = outputs["logits"].detach().to(device="cpu", dtype=torch.float32)
                 # need to remove batch dimension
