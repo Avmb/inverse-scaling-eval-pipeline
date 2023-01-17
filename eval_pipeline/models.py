@@ -180,6 +180,9 @@ class HFModel(Model):
         examples: list[ClassificationExample],
         task_type: TaskType,
     ) -> dict[str, Union[Sequence[float], Sequence[int]]]:
+        if self.is_seq2seq:
+            return self._evaluate_classification_seq2seq(examples, task_type)
+
         prompts = [
             example.prompt + class_seq
             for example in examples
@@ -239,6 +242,80 @@ class HFModel(Model):
             "total_logprob": total_logprobs,
         }
 
+    def _evaluate_classification_seq2seq(
+        self,
+        examples: list[ClassificationExample],
+        task_type: TaskType,
+    ) -> dict[str, Union[Sequence[float], Sequence[int]]]:
+
+        all_logits = []
+        all_tokens = []
+        for example in examples:
+            tokenized_inputs = self.tokenizer(example.prompt, return_tensors="pt", truncation=True).to(self.device) 
+            for class_seq in example.classes:
+                decoder_tokenized_inputs = self.tokenizer(class_seq, return_tensors="pt", truncation=True).to(self.device)
+                decoder_input_ids = decoder_tokenized_inputs.input_ids
+                decoder_input_ids = model._shift_right(decoder_input_ids)
+                outputs = self.model(input_ids=tokenized_inputs.input_ids, decoder_input_ids=decoder_tokenized_inputs.input_ids)
+                logits = outputs["logits"].detach().to(device="cpu", dtype=torch.float32)
+                # need to remove batch dimension
+                all_logits.append(torch.squeeze(logits))
+                all_tokens.append(torch.squeeze(decoder_input_ids))
+
+        total_logprobs = []
+        losses = []
+        labels_correct = []
+        labels_predicted = []
+        prompt_start = 0
+        for example in examples:
+            n_classes = len(example.classes)
+            class_logprobs = []
+            for j in range(n_classes):
+                class_index = prompt_start + j
+                class_logits = all_logits[class_index]
+                # the lengths of each class sequence in tokens
+                class_sequence = example.classes[j]
+                # NOTE: we subtract the len start-of-sequence if needed
+                target_token_length = (
+                    len(self.tokenizer(class_sequence)["input_ids"])
+                    - self.correction_for_start_token
+                )
+                # we only need the logits for the end sequence
+                tokens = all_tokens[class_index]
+                # we have to go back by one because we don't care about the logits for the predicted token
+                sequence_logits = class_logits[-target_token_length - 1 : -1]
+                sequence_tokens = tokens[-target_token_length:]
+                # we take a log_softmax over all token logits for each position in the class sequence to
+                #  get log probabilities, and then sum the logprobs for the tokens actually chosen
+                logprobs = F.log_softmax(sequence_logits, dim=-1)
+                sequence_tokens_truncated = sequence_tokens[:logprobs.shape[0]]
+                class_logprob = sum(
+                    [logprobs[i, token] for i, token in enumerate(sequence_tokens_truncated)]
+                )
+                class_logprobs.append(class_logprob.item())  # type: ignore (the sum is never empty so never just 0, always a tensor)
+
+            total_logprob = torch.logsumexp(torch.tensor(class_logprobs), dim=-1).item()
+            normalised_logprobs = F.log_softmax(torch.tensor(class_logprobs), dim=-1)
+            loss = -normalised_logprobs[example.answer_index].item()
+            label_correct = int(np.argmax(normalised_logprobs) == example.answer_index)
+            total_logprobs.append(total_logprob)
+            losses.append(loss)
+            labels_correct.append(label_correct)
+
+            label_predicted = example.classes[
+                torch.tensor(class_logprobs).argmax(dim=-1).item()
+            ]
+            labels_predicted.append(label_predicted)
+
+            prompt_start += n_classes
+        return {
+            "loss": losses,
+            "correct": labels_correct,
+            "predicted": labels_predicted,
+            "total_logprob": total_logprobs,
+        }
+
+
     def _get_logits_and_tokens(
         self, prompts: list[str]
     ) -> tuple[list[torch.Tensor], list[torch.Tensor]]:
@@ -258,6 +335,9 @@ class HFModel(Model):
     def _evaluate_sequence_prob(
         self, examples: list[SequenceProbExample]
     ) -> dict[str, Sequence[float]]:
+        if self.is_seq2seq:
+            raise NotImplemented()
+
         # finding the target
         prompts = [example.prompt + example.completion for example in examples]
         tokenized_inputs = self.tokenizer(
@@ -293,6 +373,9 @@ class HFModel(Model):
     ) -> dict[str, Union[Sequence[float], Sequence[int]]]:
         """logodds is much like classification, except we need to compare across prompts so we just
         compute the log odds here"""
+        if self.is_seq2seq:
+            raise NotImplemented()
+
         prompts = [example.prompt for example in examples]
         other_prompts = [example.other_prompt for example in examples]
         tokenized_inputs = self.tokenizer(

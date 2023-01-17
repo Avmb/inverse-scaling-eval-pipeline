@@ -41,6 +41,12 @@ size_dict = {
     "opt-2.7b": 2_700_000_000,
     "opt-6.7b": 6_700_000_000,
     "opt-13b": 13_000_000_000,
+    # FLAN-T5 sizes from their names
+    "flan-t5-small": 80_000_000,
+    "flan-t5-base": 250_000_000,
+    "flan-t5-large": 780_000_000,
+    "flan-t5-xl": 3_000_000_000,
+    "flan-t5-xxl": 11_000_000_000,
     # codegen sizes from their names
     "codegen-350M-mono" : 350_000_000,
     "codegen-2B-mono" : 2_000_000_000,
