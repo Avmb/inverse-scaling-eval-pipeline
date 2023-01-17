@@ -57,11 +57,11 @@ ValidHFModel = Literal[
     "codegen-2B-mono",
     "codegen-6B-mono",
     "codegen-16B-mono",
-    #"flan-t5-small",
-    #"flan-t5-base",
-    #"flan-t5-large",
-    #"flan-t5-xl",
-    #"flan-t5-xxl",
+    "flan-t5-small",
+    "flan-t5-base",
+    "flan-t5-large",
+    "flan-t5-xl",
+    "flan-t5-xxl",
 ]
 valid_hf_models: tuple[ValidHFModel, ...] = get_args(ValidHFModel)
 
@@ -95,6 +95,7 @@ class Model(ABC):
 class HFModel(Model):
     def __init__(self, model_name: ValidHFModel, device: Device) -> None:
         self.device = device
+        self.is_seq2seq = False
         # have to download the opt models in advance since they're new
         # The OPT models have a start token that we need to remove in some places
         self.correction_for_start_token = 0
@@ -102,6 +103,11 @@ class HFModel(Model):
             prefix = "facebook/"
             self.model = self._load_opt(prefix + model_name, device)
             self.correction_for_start_token = 1
+        elif model_name.startswith("flan-"):
+            prefix = "google/"
+            torch.cuda.empty_cache()
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(prefix + model_name, max_length=1024).to(self.device)
+            self.is_seq2seq = True
         else:
             if model_name.startswith("gpt-neo") or model_name.startswith("gpt-j"):
                 prefix = "EleutherAI/"
